@@ -6,7 +6,9 @@ namespace SmellyApp
     {
         static void Main(string[] args)
         {
-            var db = new Database();
+            Console.WriteLine("Hello World!");
+
+            var db = null;
             db.Connect();
             db.Query("SELECT * FROM Users WHERE isAdmin = 1");
 
