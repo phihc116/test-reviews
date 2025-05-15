@@ -1,0 +1,33 @@
+name: Label PR based on title
+
+on:
+  pull_request:
+    types: [opened, edited]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = context.payload.pull_request.title.toLowerCase();
+            const labels = [];
+
+            if(title.startsWith('fix') || title.startsWith('bug')) {
+              labels.push('bugfix');
+            } else if(title.startsWith('feat') || title.startsWith('feature')) {
+              labels.push('feature');
+            } else {
+              labels.push('needs-triage');
+            }
+
+            if(labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                labels: labels,
+              });
+            }
