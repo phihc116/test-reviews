@@ -1,0 +1,80 @@
+name: Prepare Env, Determine Tag and Push
+description: Performs checkout, determine env, tag, and push in a single composite action
+
+inputs:
+  environment:
+    description: 'Environment (prod, staging, dev)'
+    required: true
+  sub-env:
+    description: 'Sub Environment (like fe, be)'
+    required: true
+  auto_tag:
+    description: 'Whether to autoincrement tag'
+    required: true
+    default: "true"
+  GITHUB_TOKEN:
+    description: 'Github Token'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Determine Env
+      id: determine
+      run: |
+        if [ "${{ inputs.auto_tag }}" == "true" ]; then
+          ENV="${{ inputs.environment }}-${{ inputs.sub-env }}"
+        elif [[ "${{ github.ref_name }}" == prod-* ]]; then
+          ENV="prod"
+        elif [[ "${{ github.ref_name }}" == staging-* ]]; then
+          ENV="staging"
+        elif [[ "${{ github.ref_name }}" == dev-* ]]; then
+          ENV="dev"
+        fi
+
+        echo "ENV=$ENV" >> $GITHUB_ENV
+        echo "ENV=$ENV" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Determine Tag
+      id: tag
+      run: |
+        if [ "${{ inputs.auto_tag }}" == "true" ]; then
+          git fetch --tags
+          prefix="${ENV}"
+
+          last_tag="$(git tag | grep "^${prefix}-" | sort -V | tail -n1)"
+
+          if [ -z "$last_tag" ]; then
+            NEW_TAG="${prefix}-0.0.1"
+          else
+            IFS='-' read -r p1 p2 <<< "$last_tag"
+
+            p2_clean="${p2#${{ inputs.sub-env }}-}"
+
+            IFS='.' read -r major minor patch <<< "$p2_clean"
+
+            patch=$((patch + 1))
+            NEW_TAG="${prefix}-${major}.${minor}.${patch}"
+          fi
+        else
+          NEW_TAG="${{ github.ref_name }}"
+        fi
+
+        echo "TAG=$NEW_TAG" >> $GITHUB_ENV
+        echo "TAG=$NEW_TAG" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Push new Git tag first
+      if: ${{ inputs.auto_tag == 'true' }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+      run: |
+        git tag "$TAG"
+        git push origin "$TAG"
+      shell: bash

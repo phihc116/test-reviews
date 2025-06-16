@@ -1,85 +1,43 @@
 name: '[FE] Push To Registry'
-run-name: 'Build for ${{ inputs.environment }}, Auto=${{ inputs.auto_tag }}'
+run-name: 'Build for ${{ inputs.environment }}, Auto=${{ inputs.auto_tag }}, Sub=${{ inputs.sub-env }}'
 
 on:
-    workflow_dispatch:
-        inputs:
-            environment:
-                description: 'Environment (prod, staging, dev)'
-                required: true
-                type: choice
-                options:
-                    - prod
-                    - staging
-                    - dev
-            auto_tag:
-                description: 'Whether to autoincrement tag (true by default)'
-                required: false
-                type: boolean
-                default: true
-
-    push:
-        tags:
-            - 'prod-fe*'
-            - 'staging-fe*'
-            - 'dev-fe*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment (prod, staging, dev)'
+        required: true
+        type: choice
+        options:
+          - prod
+          - staging
+          - dev
+      sub-env:
+        description: 'Sub Environment (like fe, be)'
+        required: true
+        type: choice
+        options:
+          - fe
+          - be
+      auto_tag:
+        description: 'Whether to autoincrement tag'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-        permissions:
-            contents: write
+    permissions:
+      contents: write
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v3
-              with:
-                  fetch-depth: 0
-
-            - name: Determine Env
-              id: determine
-              run: |
-                  if [ -n "${{ inputs.environment }}" ]; then
-                     ENV="${{ inputs.environment }}"
-                  elif [[ "${{ github.ref_name }}" == prod-* ]]; then
-                     ENV="prod"
-                  elif [[ "${{ github.ref_name }}" == staging-* ]]; then
-                     ENV="staging"
-                  elif [[ "${{ github.ref_name }}" == dev-* ]]; then
-                     ENV="dev"
-                  fi
-
-                  echo "ENV=$ENV" >> $GITHUB_ENV
-
-            - name: Determine Tag
-              id: tag
-              run: |
-                  if [ "${{ inputs.auto_tag }}" == "true" ]; then
-                     git fetch --tags
-                     prefix="${ENV}-fe"
-
-                     last_tag="$(git tag | grep "^${prefix}" | sort -V | tail -n1)"
-
-                     if [ -z "$last_tag" ]; then
-                        NEW_TAG="${prefix}-0.0.1"
-                     else
-                        IFS='-' read -r p1 p2 <<< "$last_tag"
-                        IFS='.' read -r major minor patch <<< "$p2"
-
-                        patch=$((patch + 1))
-                        NEW_TAG="${prefix}-${major}.${minor}.${patch}"
-                     fi
-                  else
-                     NEW_TAG="${{ github.ref_name }}"
-                  fi
-
-                  echo "TAG=$NEW_TAG" >> $GITHUB_ENV
-
-            - name: Push new Git tag first
-              if: ${{ inputs.auto_tag == true }}
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  git tag "$TAG"
-                  git push origin "$TAG" 
+    steps:
+      - name: Prepare Env, Tag and Push
+        uses: ./actions/prepare-and-push
+        with:
+          environment: ${{ inputs.environment }}
+          sub-env: ${{ inputs.sub-env }}
+          auto_tag: ${{ inputs.auto_tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
+ 
