@@ -1,52 +1,85 @@
-name: Bump Tag and Push
+name: '[FE] Push To Registry'
+run-name: 'Build for ${{ inputs.environment }}, Auto=${{ inputs.auto_tag }}'
 
 on:
-  push:
-    branches:
-      - main
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: 'Environment (prod, staging, dev)'
+                required: true
+                type: choice
+                options:
+                    - prod
+                    - staging
+                    - dev
+            auto_tag:
+                description: 'Whether to autoincrement tag (true by default)'
+                required: false
+                type: boolean
+                default: true
+
+    push:
+        tags:
+            - 'prod-fe*'
+            - 'staging-fe*'
+            - 'dev-fe*'
 
 jobs:
-  bump-tag:
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: write  # required to push back tag
-    
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # fetch all tags hi
+    build:
+        runs-on: ubuntu-latest
 
-      - name: Get latest tag
-        id: get_tag
-        run: |
-          tag="$(git tag | sort -V | tail -n 1)"
-          if [ -z "$tag" ]; then
-            tag="v0.0.0"
-          fi
-          echo "current=$tag"
-          echo "current=$tag" >> $GITHUB_OUTPUT
+        permissions:
+            contents: write
 
-      - name: Bump patch version
-        id: bump
-        run: |
-          tag="${{ steps.get_tag.outputs.current }}"
-          IFS='.' read -r prefix major minor patch <<< "${tag#v}"
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
 
-          patch=$((patch + 1))
-          new_tag="v$major.$minor.$patch"
+            - name: Determine Env
+              id: determine
+              run: |
+                  if [ -n "${{ inputs.environment }}" ]; then
+                     ENV="${{ inputs.environment }}"
+                  elif [[ "${{ github.ref_name }}" == prod-* ]]; then
+                     ENV="prod"
+                  elif [[ "${{ github.ref_name }}" == staging-* ]]; then
+                     ENV="staging"
+                  elif [[ "${{ github.ref_name }}" == dev-* ]]; then
+                     ENV="dev"
+                  fi
 
-          echo "new=$new_tag"
-          echo "new=$new_tag" >> $GITHUB_OUTPUT
+                  echo "ENV=$ENV" >> $GITHUB_ENV
 
-      - name: Push new tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          new_tag="${{ steps.bump.outputs.new }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "actions@github.com"
+            - name: Determine Tag
+              id: tag
+              run: |
+                  if [ "${{ inputs.auto_tag }}" == "true" ]; then
+                     git fetch --tags
+                     prefix="${ENV}-fe"
 
-          git tag "$new_tag"
-          git push origin "$new_tag"
+                     last_tag="$(git tag | grep "^${prefix}" | sort -V | tail -n1)"
 
+                     if [ -z "$last_tag" ]; then
+                        NEW_TAG="${prefix}-0.0.1"
+                     else
+                        IFS='-' read -r p1 p2 <<< "$last_tag"
+                        IFS='.' read -r major minor patch <<< "$p2"
+
+                        patch=$((patch + 1))
+                        NEW_TAG="${prefix}-${major}.${minor}.${patch}"
+                     fi
+                  else
+                     NEW_TAG="${{ github.ref_name }}"
+                  fi
+
+                  echo "TAG=$NEW_TAG" >> $GITHUB_ENV
+
+            - name: Push new Git tag first
+              if: ${{ inputs.auto_tag == true }}
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  git tag "$TAG"
+                  git push origin "$TAG" 
