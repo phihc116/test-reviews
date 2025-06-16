@@ -51,6 +51,8 @@ runs:
 
           last_tag="$(git tag | grep "^${prefix}-" | sort -V | tail -n1)"
 
+          echo "last_tag=$last_tag"
+
           if [ -z "$last_tag" ]; then
             NEW_TAG="${prefix}-0.0.1"
           else
