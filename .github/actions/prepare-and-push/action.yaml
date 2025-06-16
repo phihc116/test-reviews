@@ -49,7 +49,7 @@ runs:
           git fetch --tags
           prefix="${ENV}"
 
-          last_tag="$(git tag | grep "^${prefix}-" | sort -V | tail -n1)"
+          last_tag="$(git tag | grep "^${prefix}-" | sort -V | tail -n1)" || true
 
           echo "last_tag=$last_tag"
 
