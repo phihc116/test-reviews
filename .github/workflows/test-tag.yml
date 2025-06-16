@@ -39,5 +39,4 @@ jobs:
           environment: ${{ inputs.environment }}
           sub-env: ${{ inputs.sub-env }}
           auto_tag: ${{ inputs.auto_tag }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
- 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}} 
