@@ -9,9 +9,9 @@ on:
                 required: true
                 type: choice
                 options:
-                    - prod
-                    - staging
-                    - dev
+                    - prod-fe
+                    - staging-fe
+                    - dev-fe
             auto_tag:
                 description: 'Whether to autoincrement tag (true by default)'
                 required: false
@@ -43,11 +43,11 @@ jobs:
                   if [ -n "${{ inputs.environment }}" ]; then
                      ENV="${{ inputs.environment }}"
                   elif [[ "${{ github.ref_name }}" == prod-* ]]; then
-                     ENV="prod"
+                     ENV="prod-fe"
                   elif [[ "${{ github.ref_name }}" == staging-* ]]; then
-                     ENV="staging"
+                     ENV="staging-fe"
                   elif [[ "${{ github.ref_name }}" == dev-* ]]; then
-                     ENV="dev"
+                     ENV="dev-fe"
                   fi
 
                   echo "ENV=$ENV" >> $GITHUB_ENV
@@ -57,7 +57,7 @@ jobs:
               run: |
                   if [ "${{ inputs.auto_tag }}" == "true" ]; then
                      git fetch --tags
-                     prefix="${ENV}-fe"
+                     prefix="${ENV}"
 
                      last_tag="$(git tag | grep "^${prefix}" | sort -V | tail -n1)"
 
