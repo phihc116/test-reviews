@@ -1,0 +1,52 @@
+name: Bump Tag and Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-tag:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write  # required to push back tag
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # fetch all tags
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          tag="$(git tag | sort -V | tail -n 1)"
+          if [ -z "$tag" ]; then
+            tag="v0.0.0"
+          fi
+          echo "current=$tag"
+          echo "current=$tag" >> $GITHUB_OUTPUT
+
+      - name: Bump patch version
+        id: bump
+        run: |
+          tag="${{ steps.get_tag.outputs.current }}"
+          IFS='.' read -r prefix major minor patch <<< "${tag#v}"
+
+          patch=$((patch + 1))
+          new_tag="v$major.$minor.$patch"
+
+          echo "new=$new_tag"
+          echo "new=$new_tag" >> $GITHUB_OUTPUT
+
+      - name: Push new tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          new_tag="${{ steps.bump.outputs.new }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+
+          git tag "$new_tag"
+          git push origin "$new_tag"
+
