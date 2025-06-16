@@ -1,5 +1,5 @@
 name: '[FE] Push To Registry'
-run-name: 'Build for ${{ inputs.environment }}, Auto=${{ inputs.auto_tag }}'
+run-name: 'Build for ${{ inputs.environment }}, Auto=${{ inputs.auto_tag }}, Sub=${{ inputs.sub-env }}'
 
 on:
     workflow_dispatch:
@@ -9,9 +9,16 @@ on:
                 required: true
                 type: choice
                 options:
-                    - prod-fe
-                    - staging-fe
-                    - dev-fe
+                    - prod
+                    - staging
+                    - dev
+            sub-env:
+                description: 'Sub Environment (like fe, be, etc)'
+                required: true
+                type: choice
+                options:
+                    - fe
+                    - be
             auto_tag:
                 description: 'Whether to autoincrement tag (true by default)'
                 required: false
@@ -40,14 +47,14 @@ jobs:
             - name: Determine Env
               id: determine
               run: |
-                   if [ -n "${{ inputs.environment }}" ]; then
-                      ENV="${{ inputs.environment }}"
+                   if [ -n "${{ inputs.environment }}" ] && [ -n "${{ inputs.sub-env }}" ]; then
+                      ENV="${{ inputs.environment }}-${{ inputs.sub-env }}"
                    elif [[ "${{ github.ref_name }}" == prod-* ]]; then
-                      ENV="prod-fe"
+                      ENV="prod"
                    elif [[ "${{ github.ref_name }}" == staging-* ]]; then
-                      ENV="staging-fe"
+                      ENV="staging"
                    elif [[ "${{ github.ref_name }}" == dev-* ]]; then
-                      ENV="dev-fe"
+                      ENV="dev"
                    fi
 
                    echo "ENV=$ENV" >> $GITHUB_ENV
@@ -66,8 +73,7 @@ jobs:
                      else
                          IFS='-' read -r p1 p2 <<< "$last_tag"
 
-                         # Loại "fe-" khỏi p2 nếu có
-                         p2_clean="${p2#fe-}"
+                         p2_clean="${p2#${{ inputs.sub-env }}-}"
 
                          IFS='.' read -r major minor patch <<< "$p2_clean"
 
