@@ -35,51 +35,56 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v3
               with:
-                  fetch-depth: 0
+                   fetch-depth: 0
 
             - name: Determine Env
               id: determine
               run: |
-                  if [ -n "${{ inputs.environment }}" ]; then
-                     ENV="${{ inputs.environment }}"
-                  elif [[ "${{ github.ref_name }}" == prod-* ]]; then
-                     ENV="prod-fe"
-                  elif [[ "${{ github.ref_name }}" == staging-* ]]; then
-                     ENV="staging-fe"
-                  elif [[ "${{ github.ref_name }}" == dev-* ]]; then
-                     ENV="dev-fe"
-                  fi
+                   if [ -n "${{ inputs.environment }}" ]; then
+                      ENV="${{ inputs.environment }}"
+                   elif [[ "${{ github.ref_name }}" == prod-* ]]; then
+                      ENV="prod-fe"
+                   elif [[ "${{ github.ref_name }}" == staging-* ]]; then
+                      ENV="staging-fe"
+                   elif [[ "${{ github.ref_name }}" == dev-* ]]; then
+                      ENV="dev-fe"
+                   fi
 
-                  echo "ENV=$ENV" >> $GITHUB_ENV
+                   echo "ENV=$ENV" >> $GITHUB_ENV
 
             - name: Determine Tag
               id: tag
               run: |
-                  if [ "${{ inputs.auto_tag }}" == "true" ]; then
+                   if [ "${{ inputs.auto_tag }}" == "true" ]; then
                      git fetch --tags
                      prefix="${ENV}"
 
-                     last_tag="$(git tag | grep "^${prefix}" | sort -V | tail -n1)"
+                     last_tag="$(git tag | grep "^${prefix}-" | sort -V | tail -n1)"
 
                      if [ -z "$last_tag" ]; then
-                        NEW_TAG="${prefix}-0.0.1"
+                         NEW_TAG="${prefix}-0.0.1"
                      else
-                        IFS='-' read -r p1 p2 <<< "$last_tag"
-                        IFS='.' read -r major minor patch <<< "$p2"
+                         IFS='-' read -r p1 p2 <<< "$last_tag"
 
-                        patch=$((patch + 1))
-                        NEW_TAG="${prefix}-${major}.${minor}.${patch}"
+                         # Loại "fe-" khỏi p2 nếu có
+                         p2_clean="${p2#fe-}"
+
+                         IFS='.' read -r major minor patch <<< "$p2_clean"
+
+                         patch=$((patch + 1))
+                         NEW_TAG="${prefix}-${major}.${minor}.${patch}"
                      fi
-                  else
+                   else
                      NEW_TAG="${{ github.ref_name }}"
-                  fi
+                   fi
 
-                  echo "TAG=$NEW_TAG" >> $GITHUB_ENV
+                   echo "TAG=$NEW_TAG" >> $GITHUB_ENV
 
             - name: Push new Git tag first
               if: ${{ inputs.auto_tag == true }}
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  git tag "$TAG"
-                  git push origin "$TAG" 
+                   git tag "$TAG"
+                   git push origin "$TAG"
+
