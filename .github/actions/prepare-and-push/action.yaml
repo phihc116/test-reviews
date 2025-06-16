@@ -16,14 +16,6 @@ inputs:
     description: 'Github Token'
     required: true
 
-outputs:
-  ENV:
-    description: "Determined environment"
-    value: ${{ steps.determine.outputs.ENV }}
-  TAG:
-    description: "Generated tag"
-    value: ${{ steps.tag.outputs.TAG}}
-
 runs:
   using: composite
   steps:
