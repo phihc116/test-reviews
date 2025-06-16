@@ -28,17 +28,21 @@ runs:
       id: determine
       run: |
         if [ "${{ inputs.auto_tag }}" == "true" ]; then
-          ENV="${{ inputs.environment }}-${{ inputs.sub-env }}"
-        elif [[ "${{ github.ref_name }}" == prod-* ]]; then
-          ENV="prod"
-        elif [[ "${{ github.ref_name }}" == staging-* ]]; then
-          ENV="staging"
-        elif [[ "${{ github.ref_name }}" == dev-* ]]; then
-          ENV="dev"
-        fi
+            if [ -z "${{ inputs.sub-env }}" ] || [ "${{ inputs.sub-env }}" == "none" ]; then
+              ENV="${{ inputs.environment }}"
+            else
+              ENV="${{ inputs.environment }}-${{ inputs.sub-env }}"
+            fi
+          elif [[ "${{ github.ref_name }}" == prod-* ]]; then
+            ENV="prod"
+          elif [[ "${{ github.ref_name }}" == staging-* ]]; then
+            ENV="staging"
+          elif [[ "${{ github.ref_name }}" == dev-* ]]; then
+            ENV="dev"
+          fi
 
-        echo "ENV=$ENV" >> "$GITHUB_ENV"
-        echo "ENV=$ENV" >> "$GITHUB_OUTPUT"
+          echo "ENV=$ENV" >> "$GITHUB_ENV"
+          echo "ENV=$ENV" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - name: Determine Tag

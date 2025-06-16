@@ -15,8 +15,10 @@ on:
       sub-env:
         description: 'Sub Environment (like fe, be)'
         required: true
+        default: none
         type: choice
         options:
+          - none
           - fe
           - be
       auto_tag:
