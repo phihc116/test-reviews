@@ -44,6 +44,7 @@ runs:
     - name: Determine Tag
       id: tag
       run: |
+        ENV="${{ steps.determine.outputs.ENV }}"
         if [ "${{ inputs.auto_tag }}" == "true" ]; then
           git fetch --tags
           prefix="${ENV}"
